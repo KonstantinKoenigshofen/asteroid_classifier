@@ -1,0 +1,82 @@
+import os
+import requests
+import pandas as pd
+from sqlalchemy import create_engine, text
+from datetime import datetime, timedelta
+
+# GitHub Actions wird diese Werte später sicher in das Skript injizieren
+NASA_API_KEY = os.getenv("NASA_API_KEY")
+NEON_DB_URL = os.getenv("NEON_DB_URL")
+
+if not NASA_API_KEY or not NEON_DB_URL:
+    raise ValueError("Umgebungsvariablen nicht gefunden!")
+
+def extract_nasa_data():
+    today = datetime.now().strftime("%Y-%m-%d")
+    # Asteroiden, die heute bis in eine Woche der Erde nahe kommen
+    end_date = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
+    
+    url = f"https://api.nasa.gov/neo/rest/v1/feed?start_date={today}&end_date={end_date}&api_key={NASA_API_KEY}"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        print("✅ Extract erfolgreich!")
+        return response.json()['near_earth_objects']
+    else:
+        raise Exception(f"Fehler bei der NASA API: {response.status_code}")
+    
+
+def transform_data(raw_data):
+    asteroids_list = []
+    
+    # raw_data ist ein Dictionary mit Daten als Keys
+    for date, asteroids in raw_data.items():
+        for ast in asteroids:
+            # Nur die Daten extrahieren, die wir für die Datenbank brauchen
+            asteroid_dict = {
+                'id': ast['id'],
+                'name': ast['name'],
+                'estimated_diameter_min_km': ast['estimated_diameter']['kilometers']['estimated_diameter_min'],
+                'estimated_diameter_max_km': ast['estimated_diameter']['kilometers']['estimated_diameter_max'],
+                'relative_velocity_kph': float(ast['close_approach_data'][0]['relative_velocity']['kilometers_per_hour']),
+                'miss_distance_km': float(ast['close_approach_data'][0]['miss_distance']['kilometers']),
+                'is_potentially_hazardous': ast['is_potentially_hazardous_asteroid'],
+                'close_approach_date': ast['close_approach_data'][0]['close_approach_date'],
+            }
+            asteroids_list.append(asteroid_dict)
+            
+    df = pd.DataFrame(asteroids_list)
+    print(f"✅ Transform erfolgreich! {len(df)} Asteroiden verarbeitet.")
+    return df
+
+def load_and_cleanup(df):
+    engine = create_engine(NEON_DB_URL)
+    
+    with engine.connect() as conn:
+        # Trick: Hole alle IDs, die schon in der Datenbank existieren
+        existing_ids = pd.read_sql("SELECT id FROM asteroids", conn)['id'].tolist()
+        
+        # Filtere das DataFrame: Behalte nur Asteroiden, deren ID NICHT in der DB ist
+        df_new = df[~df['id'].isin(existing_ids)]
+        
+        if not df_new.empty:
+            # Neue Asteroiden hochladen
+            df_new.to_sql('asteroids', con=conn, if_exists='append', index=False)
+            print(f"✅ Load erfolgreich! {len(df_new)} neue Asteroiden hochgeladen.")
+        else:
+            print("✅ Load übersprungen. Keine neuen Asteroiden gefunden.")
+        
+        # Cleanup: Alles löschen, was älter als 60 Tage ist, um Platz zu sparen
+        cleanup_query = text("DELETE FROM asteroids WHERE close_approach_date < CURRENT_DATE - INTERVAL '60 days'")
+        conn.execute(cleanup_query)
+        conn.commit()
+        print("✅ Cleanup erfolgreich! Alte Daten wurden gelöscht.")
+
+# Die eigentliche Pipeline-Ausführung
+try:
+    raw_json = extract_nasa_data()
+    clean_dataframe = transform_data(raw_json)
+    load_and_cleanup(clean_dataframe)
+    print("ETL-Pipeline durchgelaufen!")
+except Exception as e:
+    print(f"Ein Fehler ist aufgetreten: {e}")
