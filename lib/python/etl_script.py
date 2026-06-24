@@ -53,8 +53,17 @@ def load_and_cleanup(df):
     engine = create_engine(NEON_DB_URL)
     
     with engine.connect() as conn:
+        # NEU 1: Wir zwingen Python dazu, die IDs als reinen Text (String) zu behandeln
+        df['id'] = df['id'].astype(str)
+        
+        # NEU 2: Falls die NASA denselben Asteroiden für diese Woche 2x gemeldet hat, behalten wir nur den ersten
+        df = df.drop_duplicates(subset=['id'])
+        
         # Trick: Hole alle IDs, die schon in der Datenbank existieren
-        existing_ids = pd.read_sql("SELECT id FROM asteroids", conn)['id'].tolist()
+        existing_ids_df = pd.read_sql("SELECT id FROM asteroids", conn)
+        
+        # NEU 3: Auch die IDs aus der Datenbank zur Sicherheit in Strings umwandeln
+        existing_ids = existing_ids_df['id'].astype(str).tolist()
         
         # Filtere das DataFrame: Behalte nur Asteroiden, deren ID NICHT in der DB ist
         df_new = df[~df['id'].isin(existing_ids)]
@@ -64,13 +73,13 @@ def load_and_cleanup(df):
             df_new.to_sql('asteroids', con=conn, if_exists='append', index=False)
             print(f"✅ Load erfolgreich! {len(df_new)} neue Asteroiden hochgeladen.")
         else:
-            print("✅ Load übersprungen. Keine neuen Asteroiden gefunden.")
+            print("✅ Load übersprungen. Keine neuen Asteroiden gefunden (Alle schon in der DB).")
         
         # Cleanup: Alles löschen, was älter als 60 Tage ist, um Platz zu sparen
         cleanup_query = text("DELETE FROM asteroids WHERE close_approach_date < CURRENT_DATE - INTERVAL '60 days'")
         conn.execute(cleanup_query)
         conn.commit()
-        print("✅ Cleanup erfolgreich! Alte Daten wurden gelöscht.")
+        print("✅ Cleanup erfolgreich! Alte Daten wurden aufgeräumt.")
 
 # Die eigentliche Pipeline-Ausführung
 try:
