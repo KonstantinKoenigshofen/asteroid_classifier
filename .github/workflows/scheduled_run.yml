@@ -33,4 +33,4 @@ jobs:
         env:
           NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
           NEON_DB_URL: ${{ secrets.NEON_DB_URL }}
-        run: python etl_script.py
+        run: python lib/python/etl_script.py
