@@ -4,7 +4,8 @@ on:
   schedule:
     # cron: 'Minute Stunde Tag Monat Wochentag' (Angabe in UTC-Zeit!)
     # 0 2 * * * bedeutet: Jeden Tag um 02:00 Uhr nachts UTC (03:00 / 04:00 Uhr deutsche Zeit)
-    - cron: '0 2 * * *'
+    # 1 zum Schluss für jeden Montag
+    - cron: '0 2 * * 1'
   workflow_dispatch: # Erlaubt es dir, das Skript jederzeit manuell per Klick auf GitHub zu starten!
 
 jobs:
