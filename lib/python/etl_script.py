@@ -1,6 +1,7 @@
 import os
 import requests
 import pandas as pd
+import joblib
 from sqlalchemy import create_engine, text
 from datetime import datetime, timedelta
 
@@ -46,7 +47,28 @@ def transform_data(raw_data):
             asteroids_list.append(asteroid_dict)
             
     df = pd.DataFrame(asteroids_list)
-    print(f"✅ Transform erfolgreich! {len(df)} Asteroiden verarbeitet.")
+
+    try:
+        model = joblib.load('asteroid_danger_model.joblib')
+
+        features = [
+            'estimated_diameter_min_km', 
+            'estimated_diameter_max_km', 
+            'relative_velocity_kph', 
+            'miss_distance_km'
+        ]
+
+        X = df[features]
+
+        y_pred = model.predict(X)
+
+        df['model_prediction'] = y_pred
+        print("Vorhersage hinzugefügt.")
+    except Exception as e:
+        print("Fehler beim Modell: {e}")
+        df['model_prediction'] = None
+
+    print(f"{len(df)} Asteroiden verarbeitet.")
     return df
 
 def load_and_cleanup(df):

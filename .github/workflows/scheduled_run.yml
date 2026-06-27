@@ -3,8 +3,7 @@ name: Daily NASA Asteroid ETL
 on:
   schedule:
     # cron: 'Minute Stunde Tag Monat Wochentag' (Angabe in UTC-Zeit!)
-    # 0 2 * * * bedeutet: Jeden Tag um 02:00 Uhr nachts UTC (03:00 / 04:00 Uhr deutsche Zeit)
-    # 1 zum Schluss für jeden Montag
+    # 0 2 * * 1 bedeutet: Jeden Montag um 02:00 Uhr nachts UTC (03:00 / 04:00 Uhr deutsche Zeit)
     - cron: '0 2 * * 1'
   workflow_dispatch: # Erlaubt es dir, das Skript jederzeit manuell per Klick auf GitHub zu starten!
 
@@ -27,7 +26,8 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests pandas sqlalchemy psycopg2-binary
+          pip install requests pandas sqlalchemy psycopg2-binary scikit-learn joblib
+
 
       # 4. Das Skript ausführen und die Secrets als Umgebungsvariablen übergeben
       - name: Run ETL Script
