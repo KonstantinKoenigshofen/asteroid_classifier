@@ -7,6 +7,9 @@ on:
     - cron: '0 2 * * 1'
   workflow_dispatch: # Erlaubt es dir, das Skript jederzeit manuell per Klick auf GitHub zu starten!
 
+permissions:
+  contents: write # Dem Workflow erlauben, ins Repository zu pushen (für die JSON-Daten)
+
 jobs:
   run-etl:
     runs-on: ubuntu-latest
@@ -35,3 +38,13 @@ jobs:
           NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
           NEON_DB_URL: ${{ secrets.NEON_DB_URL }}
         run: python lib/python/etl_script.py
+
+        # JSON-Datein ins Repository pushen
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add data.json
+          # Überprüfen, ob sich überhaupt was geändert hat, um leere Commits zu vermeiden
+          # skip ci verhindert, dass nach dem pushen ein Workflow gestartet wird
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update asteroid data.json [skip ci]" && git push)

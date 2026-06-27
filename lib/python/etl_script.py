@@ -9,6 +9,9 @@ from datetime import datetime, timedelta
 NASA_API_KEY = os.getenv("NASA_API_KEY")
 NEON_DB_URL = os.getenv("NEON_DB_URL")
 
+# Engine erstellen
+engine = create_engine(NEON_DB_URL)
+
 if not NASA_API_KEY or not NEON_DB_URL:
     raise ValueError("Umgebungsvariablen nicht gefunden!")
 
@@ -76,8 +79,7 @@ def transform_data(raw_data):
     print(f"{len(df)} Asteroiden verarbeitet.")
     return df
 
-def load_and_cleanup(df):
-    engine = create_engine(NEON_DB_URL)
+def load_and_cleanup(df, engine):
     
     with engine.connect() as conn:
         # NEU 1: Wir zwingen Python dazu, die IDs als reinen Text (String) zu behandeln
@@ -108,11 +110,27 @@ def load_and_cleanup(df):
         conn.commit()
         print("✅ Cleanup erfolgreich! Alte Daten wurden aufgeräumt.")
 
+def export_to_json(engine):
+    print("🚀 Starte Export der JSON-Datei für das Frontend...")
+    # Wir holen uns die 20 Asteroiden, die uns als nächstes am nächsten kommen
+    query = """
+    SELECT * FROM asteroids 
+    WHERE close_approach_date >= CURRENT_DATE 
+    ORDER BY close_approach_date ASC 
+    LIMIT 20
+    """
+    df_export = pd.read_sql(query, engine)
+    
+    # Als JSON speichern
+    df_export.to_json('data.json', orient='records', date_format='iso', indent=4)
+    print("✅ data.json wurde erfolgreich im Hauptordner erstellt.")
+
 # Die eigentliche Pipeline-Ausführung
 try:
     raw_json = extract_nasa_data()
     clean_dataframe = transform_data(raw_json)
-    load_and_cleanup(clean_dataframe)
+    load_and_cleanup(clean_dataframe, engine)
+    export_to_json(engine)
     print("ETL-Pipeline durchgelaufen!")
 except Exception as e:
     print(f"Ein Fehler ist aufgetreten: {e}")
