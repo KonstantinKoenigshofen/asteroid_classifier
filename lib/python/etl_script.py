@@ -49,7 +49,12 @@ def transform_data(raw_data):
     df = pd.DataFrame(asteroids_list)
 
     try:
-        model = joblib.load('asteroid_danger_model.joblib')
+
+        # Den absoluten Pfad zur .joblib Datei dynamisch ermitteln
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        model_path = os.path.join(script_dir, 'asteroid_danger_model.joblib')
+
+        model = joblib.load(model_path)
 
         features = [
             'estimated_diameter_min_km', 
@@ -65,7 +70,7 @@ def transform_data(raw_data):
         df['model_prediction'] = y_pred
         print("Vorhersage hinzugefügt.")
     except Exception as e:
-        print("Fehler beim Modell: {e}")
+        print(f"Fehler beim Modell: {e}")
         df['model_prediction'] = None
 
     print(f"{len(df)} Asteroiden verarbeitet.")
