@@ -1,0 +1,60 @@
+name: Deploy Flutter Web to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main 
+  workflow_dispatch: # Ermöglicht das manuelle Starten des Workflows
+
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Verhindert, dass mehrere Deployments gleichzeitig laufen
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Flutter auf dem Runner installieren
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      # Abhängigkeiten herunterladen
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Das GitHub Pages Verzeichnis konfigurieren (wichtig für Dateipfade)
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v4
+
+      # Flutter für das Web bauen
+      # --base-href teilt Flutter den Unterordner des Repos mit, damit CSS/Bilder laden
+      - name: Build Web App
+        run: |
+          flutter build web --release --base-href "${{ steps.pages.outputs.base_path }}/"
+
+      # HTML-Dateien für GitHub Pages vorbereiten
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'build/web'
+
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

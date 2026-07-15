@@ -27,30 +27,35 @@ class _MainAppState extends State<MainApp> {
     return MaterialApp(
       title: 'Asteroiden-Tracker',
       themeMode: _themeMode,
-      theme: ThemeData( // Helles Design
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF28965A),
-          brightness: Brightness.light
-        ),
-        appBarTheme: const AppBarTheme(
-          elevation: 0, //kein Schatten
-          scrolledUnderElevation: 3, // leichter Schatten/Farbton beim Scrollen
-          centerTitle: false,
-        )
+// Ersetze diese Abschnitte in deiner main_app.dart (MainApp)
+    theme: ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF28965A),
+        brightness: Brightness.light,
+        surface: const Color(0xFFF3F6F9), // Kühles, helles Grau
       ),
-      darkTheme: ThemeData( // Dunkles Design
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF28965A),
-          brightness: Brightness.dark,
-        ),
-        appBarTheme: const AppBarTheme(
-          elevation: 0, //kein Schatten
-          scrolledUnderElevation: 3, // leichter Schatten/Farbton beim Scrollen
-          centerTitle: false,
-        )
+      appBarTheme: const AppBarTheme(
+        elevation: 0,
+        centerTitle: true,
+        backgroundColor: Colors.transparent, // Nutzt die Hintergrundfarbe
+        scrolledUnderElevation: 2,
       ),
+    ),
+    darkTheme: ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF28965A),
+        brightness: Brightness.dark,
+        surface: const Color(0xFF0B141A), // Extrem dunkles Space-Blau/Grau
+      ),
+      appBarTheme: const AppBarTheme(
+        elevation: 0,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        scrolledUnderElevation: 2,
+      ),
+    ),
       home: HomePage(
         onToggleTheme: _toogleTheme,
         isDark: _themeMode == ThemeMode.dark,
