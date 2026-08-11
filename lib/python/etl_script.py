@@ -5,7 +5,7 @@ import joblib
 from sqlalchemy import create_engine, text
 from datetime import datetime, timedelta
 
-# GitHub Actions wird diese Werte später sicher in das Skript injizieren
+# GitHub Actions wird diese Werte später in das Skript injizieren
 NASA_API_KEY = os.getenv("NASA_API_KEY")
 NEON_DB_URL = os.getenv("NEON_DB_URL")
 
@@ -24,7 +24,7 @@ def extract_nasa_data():
     response = requests.get(url)
     
     if response.status_code == 200:
-        print("✅ Extract erfolgreich!")
+        print("Extract erfolgreich!")
         return response.json()['near_earth_objects']
     else:
         raise Exception(f"Fehler bei der NASA API: {response.status_code}")
@@ -51,6 +51,7 @@ def transform_data(raw_data):
             
     df = pd.DataFrame(asteroids_list)
 
+    # Vorhersage des Modells
     try:
 
         # Den absoluten Pfad zur .joblib Datei dynamisch ermitteln
@@ -82,37 +83,35 @@ def transform_data(raw_data):
 def load_and_cleanup(df, engine):
     
     with engine.connect() as conn:
-        # NEU 1: Wir zwingen Python dazu, die IDs als reinen Text (String) zu behandeln
+        # Ids in String umwandeln
         df['id'] = df['id'].astype(str)
         
-        # NEU 2: Falls die NASA denselben Asteroiden für diese Woche 2x gemeldet hat, behalten wir nur den ersten
+        # Duplikate entfernen
         df = df.drop_duplicates(subset=['id'])
         
-        # Trick: Hole alle IDs, die schon in der Datenbank existieren
+        # Alle derzeitigen IDs aus der Datenbank holen und in Strings umwandeln
         existing_ids_df = pd.read_sql("SELECT id FROM asteroids", conn)
         
-        # NEU 3: Auch die IDs aus der Datenbank zur Sicherheit in Strings umwandeln
         existing_ids = existing_ids_df['id'].astype(str).tolist()
         
-        # Filtere das DataFrame: Behalte nur Asteroiden, deren ID NICHT in der DB ist
+        # Nur Asteroiden laden, die noch nicht in der Datenbank sind
         df_new = df[~df['id'].isin(existing_ids)]
         
         if not df_new.empty:
             # Neue Asteroiden hochladen
             df_new.to_sql('asteroids', con=conn, if_exists='append', index=False)
-            print(f"✅ Load erfolgreich! {len(df_new)} neue Asteroiden hochgeladen.")
+            print(f"Load erfolgreich! {len(df_new)} neue Asteroiden hochgeladen.")
         else:
-            print("✅ Load übersprungen. Keine neuen Asteroiden gefunden (Alle schon in der DB).")
+            print("Load übersprungen. Keine neuen Asteroiden gefunden.")
         
-        # Cleanup: Alles löschen, was älter als 60 Tage ist, um Platz zu sparen
+        # Alles löschen, was älter als 60 Tage ist
         cleanup_query = text("DELETE FROM asteroids WHERE close_approach_date < CURRENT_DATE - INTERVAL '60 days'")
         conn.execute(cleanup_query)
         conn.commit()
-        print("✅ Cleanup erfolgreich! Alte Daten wurden aufgeräumt.")
+        print("Alte Daten wurden aufgeräumt.")
 
 def export_to_json(engine):
-    print("🚀 Starte Export der JSON-Datei für das Frontend...")
-    # Wir holen uns die 20 Asteroiden, die uns als nächstes am nächsten kommen
+    print("Starte Export der JSON-Datei für das Frontend...")
     query = """
     SELECT * FROM asteroids 
     WHERE close_approach_date >= CURRENT_DATE 
@@ -123,7 +122,7 @@ def export_to_json(engine):
     
     # Als JSON speichern
     df_export.to_json('data.json', orient='records', date_format='iso', indent=4)
-    print("✅ data.json wurde erfolgreich im Hauptordner erstellt.")
+    print("data.json wurde erfolgreich im Hauptordner erstellt.")
 
 # Die eigentliche Pipeline-Ausführung
 try:
