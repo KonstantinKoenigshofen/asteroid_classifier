@@ -1,3 +1,5 @@
 # asteroid_classifier
 
-A new Flutter project.
+Ziel dieses Projektes war das Erstellen einer Internetseite, auf der aktuelle (wöchentliche Aktualisierung) erdnahe Asteroiden aus der NASA-API "Asteroids - NeoWs" dargestellt werden und mithilfe eines trainierten ML-Modell nach der potenziellen Gefahr klassifiziert werden (Link: https://konstantinkoenigshofen.github.io/asteroid_classifier/).
+Die Daten werden dabei über ein ETL-Skript von der API geholt, verarbeitet und anschließend auf eine Neon-Datenbank geladen. Das Skript wird wöchentlich über Github-Actions automatisch ausgeführt.
+Für die Klassifizierung wurde ein RandomForest-Modell mithilfe der Daten aus der API trainiert (siehe Nasa_NeoWs_ML_Model.ipynb). Dabei ist anzumerken, dass die Vorhersage des Modells von der NASA-Vorhersage teilweise abweicht, da letztere mehr wahrscheinlich mehr Merkmale und Vorgehensweisen für die Klassifizierung einbezieht, welche in den Daten der API nicht vorhanden sind. Das Frontend wurde in Flutter erstellt, wobei die Daten als JSON-Datei von der App abgerufen werden. 
